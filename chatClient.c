@@ -44,8 +44,8 @@ void chat(int socket_fd){
 				memset(buf, 0, MAXDATASIZE);
 				printf("Client> ");
 				fgets(buf, MAXDATASIZE-1, stdin);
-				cmp = strncmp(buf, "quit", 4);
-				//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
+				cmp = strncmp(buf, "\\quit", 5);
+				printf("> buf: '%s', strncmp: %d\n", buf, cmp);
 				if (cmp == 0){
 						printf("Connection closed by Client");
 						close(socket_fd);

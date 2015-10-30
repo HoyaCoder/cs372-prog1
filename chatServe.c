@@ -50,12 +50,11 @@ void chat(int socket_fd){
 				memset(buf, 0, MAXDATASIZE);
 				printf("Server> ");
 				fgets(buf, MAXDATASIZE-1, stdin);
-				cmp = strncmp(buf, "quit", 4);
+				cmp = strncmp(buf, "\\quit", 4);
 				//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
 				if (cmp == 0){
-						printf("Connection closed by Server");
-						close(socket_fd);
-						exit(0);
+						printf("Connection closed by Server\n");
+						return;
 				}
 				else{
 						if(send(socket_fd, buf, strlen(buf), 0) == -1){
@@ -148,12 +147,14 @@ int main(int argc, char *argv[])
 
     while(1) {  // main accept() loop
         sin_size = sizeof their_addr;
+        printf("server: waiting for client\n");
         new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
         
         printf("server: new_fd: %d\n", new_fd);
         if (new_fd == -1) {
             perror("accept");
-            continue;
+            return 1;
+            //continue;
         }
         
 
@@ -165,11 +166,16 @@ int main(int argc, char *argv[])
         if (fork() == 0) { // this is the child process
             close(sockfd); // child doesn't need the listener
             
-						chat(new_fd);   
+						chat(new_fd); 
+						printf("returned from call to chat\n");
+						close(new_fd);
+						break; 
         }
+        printf("end of while loop\n");
         
     }
-
+    close(sockfd);
+		printf("exiting\n ");
     return 0;
 }
 
