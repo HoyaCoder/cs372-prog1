@@ -134,7 +134,10 @@ int main(int argc, char *argv[])
     if(send(sockfd, handle, strlen(handle), 0) == -1){
 		perror("send");
 	}
-			
+	
+	printf("Wait for prompt to begin typing message\n");
+	printf("Type '\\quit' to quit at any time\n");
+	
 	chat(sockfd, handle);      
 
     close(sockfd);

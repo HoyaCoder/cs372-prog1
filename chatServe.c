@@ -140,15 +140,14 @@ int main(int argc, char *argv[])
     printf("server: waiting for connections...\n");
 
 	sin_size = sizeof their_addr;
-	printf("server: waiting for client\n");
+	//printf("server: waiting for client\n");
 	new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
 	    
     close(sockfd);
-	printf("server: new_fd: %d\n", new_fd);
+
 	if (new_fd == -1) {
 		perror("accept");
 		exit(1);
-		//continue;
 	}
 	inet_ntop(their_addr.ss_family,
 		get_in_addr((struct sockaddr *)&their_addr),
@@ -158,14 +157,12 @@ int main(int argc, char *argv[])
 				perror("recv");
 				exit(1);
 	}	
+	cliHandle[numbytes] = '\0';
 	printf("server: got connection from %s\n", cliHandle);
-
+	printf("Wait for prompt to begin typing message\n");
+	printf("Type '\\quit' to quit at any time\n");
 	chat(new_fd, cliHandle); 
-	printf("returned from call to chat\n");
 
-	printf("end of while loop\n");
-	
-	printf("exiting\n ");
     return 0;
 }
 
