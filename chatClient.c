@@ -35,14 +35,7 @@ void chat(int socket_fd, char* handle){
 	int numbytes;
 	int quit;
 	while(1){
-		//receive
-		if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
-			perror("recv");
-			exit(1);
-		}
-		buf[numbytes-1] = '\0';
-		printf("Server> %s\n",buf);
-
+	
 		//send
 		memset(buf, 0, MAXDATASIZE);
 		printf("%s> ", handle);
@@ -53,7 +46,6 @@ void chat(int socket_fd, char* handle){
 			if(send(socket_fd, "Connection closed by Client\n", 28, 0) == -1){
 				perror("send");
 			}
-			printf("Connection closed by Client\n");
 			close(socket_fd);
 			exit(0);
 		}
@@ -62,6 +54,19 @@ void chat(int socket_fd, char* handle){
 				perror("send");
 			}
 		}
+		
+		//receive
+		if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+			perror("recv");
+			exit(1);
+		}
+		if (strncmp(buf, "Connection closed by Server", 27) == 0){
+			printf("%s\n", buf);
+			close(socket_fd);
+			exit(0);
+		}
+		buf[numbytes-1] = '\0';
+		printf("Server> %s\n",buf);
 	}
 	return;
 }
@@ -126,6 +131,10 @@ int main(int argc, char *argv[])
 	if (handle[ln] == '\n')
     handle[ln] = '\0';
     
+    if(send(sockfd, handle, strlen(handle), 0) == -1){
+		perror("send");
+	}
+			
 	chat(sockfd, handle);      
 
     close(sockfd);

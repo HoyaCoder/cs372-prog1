@@ -15,21 +15,11 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-//#define PORT "3490"  // the port users will be connecting to
-
 #define BACKLOG 10     // how many pending connections queue will hold
 
 #define MAXDATASIZE 500
 
-void sigchld_handler(int s)
-{
-    // waitpid() might overwrite errno, so we save and restore it:
-    int saved_errno = errno;
-
-    while(waitpid(-1, NULL, WNOHANG) > 0);
-
-    errno = saved_errno;
-}
+#define MAXHANDLESIZE 10 // max number of bytes allowed in client's handle
 
 
 // get sockaddr, IPv4 or IPv6:
@@ -42,33 +32,43 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void chat(int socket_fd){
+void chat(int socket_fd, char* clientHandle){
 		char buf[MAXDATASIZE];
 		int numbytes;
 		int quit;
 		while(1){
-				memset(buf, 0, MAXDATASIZE);
-				printf("Server> ");
-				fgets(buf, MAXDATASIZE-1, stdin);
-				quit = strncmp(buf, "\\quit", 4);
-				//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
-				if (quit == 0){
-					printf("Connection closed by Server\n");
-					close(socket_fd);
-					exit(0);
-				}
-				else{
-					if(send(socket_fd, buf, strlen(buf), 0) == -1){
-						perror("send");
-					}
-				}
-				memset(buf, 0, MAXDATASIZE);
-				if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
-        		perror("recv");
-        		exit(1);
-    		}
+			//receive
+			memset(buf, 0, MAXDATASIZE);
+			if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+				perror("recv");
+				exit(1);
+			}
+			if (strncmp(buf, "Connection closed by Client", 27) == 0){
+				printf("%s\n", buf);
+				close(socket_fd);
+				exit(0);
+			}
     		buf[numbytes-1] = '\0';
-    		printf("Client> %s\n",buf);
+    		printf("%s> %s\n", clientHandle, buf);
+    		
+			//send
+			memset(buf, 0, MAXDATASIZE);
+			printf("Server> ");
+			fgets(buf, MAXDATASIZE-1, stdin);
+			quit = strncmp(buf, "\\quit", 4);
+			//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
+			if (quit == 0){
+				if(send(socket_fd, "Connection closed by Server\n", 28, 0) == -1){
+					perror("send");
+				}
+				close(socket_fd);
+				exit(0);
+			}
+			else{
+				if(send(socket_fd, buf, strlen(buf), 0) == -1){
+					perror("send");
+				}
+			}
   
 		}
 		return;
@@ -84,7 +84,8 @@ int main(int argc, char *argv[])
     int yes=1;
     char s[INET6_ADDRSTRLEN];
     int rv;
-    
+    int numbytes;
+    char cliHandle[MAXHANDLESIZE];
             
     if (argc != 2) {
         fprintf(stderr,"usage: server portnumber\n");
@@ -146,17 +147,20 @@ int main(int argc, char *argv[])
 	printf("server: new_fd: %d\n", new_fd);
 	if (new_fd == -1) {
 		perror("accept");
-		return 1;
+		exit(1);
 		//continue;
 	}
-	
-
 	inet_ntop(their_addr.ss_family,
 		get_in_addr((struct sockaddr *)&their_addr),
 		s, sizeof s);
-	printf("server: got connection from %s\n", s);
+		
+	if ((numbytes = recv(new_fd, cliHandle, MAXDATASIZE-1, 0)) == -1) {
+				perror("recv");
+				exit(1);
+	}	
+	printf("server: got connection from %s\n", cliHandle);
 
-	chat(new_fd); 
+	chat(new_fd, cliHandle); 
 	printf("returned from call to chat\n");
 
 	printf("end of while loop\n");
