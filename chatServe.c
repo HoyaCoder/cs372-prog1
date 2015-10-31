@@ -45,21 +45,22 @@ void *get_in_addr(struct sockaddr *sa)
 void chat(int socket_fd){
 		char buf[MAXDATASIZE];
 		int numbytes;
-		int cmp;
+		int quit;
 		while(1){
 				memset(buf, 0, MAXDATASIZE);
 				printf("Server> ");
 				fgets(buf, MAXDATASIZE-1, stdin);
-				cmp = strncmp(buf, "\\quit", 4);
+				quit = strncmp(buf, "\\quit", 4);
 				//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
-				if (cmp == 0){
-						printf("Connection closed by Server\n");
-						return;
+				if (quit == 0){
+					printf("Connection closed by Server\n");
+					close(socket_fd);
+					exit(0);
 				}
 				else{
-						if(send(socket_fd, buf, strlen(buf), 0) == -1){
-							perror("send");
-						}
+					if(send(socket_fd, buf, strlen(buf), 0) == -1){
+						perror("send");
+					}
 				}
 				memset(buf, 0, MAXDATASIZE);
 				if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
@@ -135,47 +136,32 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    sa.sa_handler = sigchld_handler; // reap all dead processes
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-
     printf("server: waiting for connections...\n");
 
-    while(1) {  // main accept() loop
-        sin_size = sizeof their_addr;
-        printf("server: waiting for client\n");
-        new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-        
-        printf("server: new_fd: %d\n", new_fd);
-        if (new_fd == -1) {
-            perror("accept");
-            return 1;
-            //continue;
-        }
-        
-
-        inet_ntop(their_addr.ss_family,
-            get_in_addr((struct sockaddr *)&their_addr),
-            s, sizeof s);
-        printf("server: got connection from %s\n", s);
-
-        if (fork() == 0) { // this is the child process
-            close(sockfd); // child doesn't need the listener
-            
-						chat(new_fd); 
-						printf("returned from call to chat\n");
-						close(new_fd);
-						break; 
-        }
-        printf("end of while loop\n");
-        
-    }
+	sin_size = sizeof their_addr;
+	printf("server: waiting for client\n");
+	new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+	    
     close(sockfd);
-		printf("exiting\n ");
+	printf("server: new_fd: %d\n", new_fd);
+	if (new_fd == -1) {
+		perror("accept");
+		return 1;
+		//continue;
+	}
+	
+
+	inet_ntop(their_addr.ss_family,
+		get_in_addr((struct sockaddr *)&their_addr),
+		s, sizeof s);
+	printf("server: got connection from %s\n", s);
+
+	chat(new_fd); 
+	printf("returned from call to chat\n");
+
+	printf("end of while loop\n");
+	
+	printf("exiting\n ");
     return 0;
 }
 

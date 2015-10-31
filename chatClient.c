@@ -18,6 +18,8 @@
 
 #define MAXDATASIZE 500 // max number of bytes we can get at once 
 
+#define MAXHANDLESIZE 10 // max number of bytes allowed in client's handle
+
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -28,36 +30,40 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void chat(int socket_fd){
-		char buf[MAXDATASIZE];
-		int numbytes;
-		int cmp;
-		while(1){
-		
-				if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
-        		perror("recv");
-        		exit(1);
-    		}
-    		buf[numbytes-1] = '\0';
-    		printf("Server> %s\n",buf);
-  
-				memset(buf, 0, MAXDATASIZE);
-				printf("Client> ");
-				fgets(buf, MAXDATASIZE-1, stdin);
-				cmp = strncmp(buf, "\\quit", 5);
-				printf("> buf: '%s', strncmp: %d\n", buf, cmp);
-				if (cmp == 0){
-						printf("Connection closed by Client");
-						close(socket_fd);
-						exit(0);
-				}
-				else{
-						if(send(socket_fd, buf, strlen(buf), 0) == -1){
-							perror("send");
-						}
-				}
+void chat(int socket_fd, char* handle){
+	char buf[MAXDATASIZE];
+	int numbytes;
+	int quit;
+	while(1){
+		//receive
+		if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+			perror("recv");
+			exit(1);
 		}
-		return;
+		buf[numbytes-1] = '\0';
+		printf("Server> %s\n",buf);
+
+		//send
+		memset(buf, 0, MAXDATASIZE);
+		printf("%s> ", handle);
+		fgets(buf, MAXDATASIZE-1, stdin);
+		quit = strncmp(buf, "\\quit", 4);
+		//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
+		if (quit == 0){
+			if(send(socket_fd, "Connection closed by Client\n", 28, 0) == -1){
+				perror("send");
+			}
+			printf("Connection closed by Client\n");
+			close(socket_fd);
+			exit(0);
+		}
+		else{
+			if(send(socket_fd, buf, strlen(buf), 0) == -1){
+				perror("send");
+			}
+		}
+	}
+	return;
 }
 
 int main(int argc, char *argv[])
@@ -66,8 +72,10 @@ int main(int argc, char *argv[])
     char buf[MAXDATASIZE];
     struct addrinfo hints, *servinfo, *p;
     int rv;
-    char s[INET6_ADDRSTRLEN];
-
+    char s[INET6_ADDRSTRLEN]; 
+    char handle[MAXHANDLESIZE];
+	size_t ln;
+    
     if (argc != 3) {
         fprintf(stderr,"usage: client hostname portnumber\n");
         exit(1);
@@ -109,8 +117,16 @@ int main(int argc, char *argv[])
     printf("client: connecting to %s\n", s);
 
     freeaddrinfo(servinfo); // all done with this structure
-
-		chat(sockfd);      
+	
+	printf("Please enter a handle up to %d characters: ", MAXHANDLESIZE);
+	fgets(handle, MAXHANDLESIZE, stdin);
+	
+	//strip newline
+	ln = strlen(handle) - 1;
+	if (handle[ln] == '\n')
+    handle[ln] = '\0';
+    
+	chat(sockfd, handle);      
 
     close(sockfd);
 
