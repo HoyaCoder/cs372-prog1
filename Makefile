@@ -1,19 +1,20 @@
-PORT = 34911
+#PORT = 34911
+#HOST = flip3.engr.oregonstate.edu
 
-compile: chatServe chatClient
+compile: server client
 
-chatServe: chatServe.c
-		gcc -o chatServe chatServe.c
+server: chatServe.cpp
+		g++ -o server chatServe.cpp
 
-chatClient: chatClient.c
-		gcc -o chatClient chatClient.c
+client: chatClient.c
+		gcc -o client chatClient.c
 
 
-server: compile
-		./chatServe $(PORT)
+#server: compile
+#		./chatServe $(PORT)
 
-client: compile
-		./chatClient flip3.engr.oregonstate.edu $(PORT)
+#client: compile
+#		./chatClient $(HOST) $(PORT)
 
 clean:
-	$(RM) *.o 
+	$(RM) *.o server client

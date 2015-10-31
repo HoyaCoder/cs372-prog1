@@ -1,5 +1,10 @@
 /*
-** server.c -- a stream socket server demo
+** Becky Solomon
+** CS 372-400
+** Fall 2015
+** Program 1
+** chatServe.cpp 
+**
 */
 
 #include <stdio.h>

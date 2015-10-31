@@ -1,5 +1,10 @@
 /*
-** client.c -- a stream socket client demo
+** Becky Solomon
+** CS 372-400
+** Fall 2015
+** Program 1
+** chatClient.c 
+**
 */
 
 #include <stdio.h>
