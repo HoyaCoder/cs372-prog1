@@ -35,67 +35,19 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void chat(int socket_fd, char* handle){
-	char buf[MAXDATASIZE];
-	int numbytes;
-	int quit;
-	while(1){
-	
-		//send
-		memset(buf, 0, MAXDATASIZE);
-		printf("%s> ", handle);
-		fgets(buf, MAXDATASIZE-1, stdin);
-		quit = strncmp(buf, "\\quit", 4);
-		//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
-		if (quit == 0){
-			if(send(socket_fd, "Connection closed by Client\n", 28, 0) == -1){
-				perror("send");
-			}
-			close(socket_fd);
-			exit(0);
-		}
-		else{
-			if(send(socket_fd, buf, strlen(buf), 0) == -1){
-				perror("send");
-			}
-		}
-		
-		//receive
-		if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
-			perror("recv");
-			exit(1);
-		}
-		if (strncmp(buf, "Connection closed by Server", 27) == 0){
-			printf("%s\n", buf);
-			close(socket_fd);
-			exit(0);
-		}
-		buf[numbytes-1] = '\0';
-		printf("Server> %s\n",buf);
-	}
-	return;
-}
 
-int main(int argc, char *argv[])
-{
-    int sockfd, numbytes;  
+int setupConnect(char* hostname, char* portno){
+	int sockfd;
     char buf[MAXDATASIZE];
     struct addrinfo hints, *servinfo, *p;
     int rv;
     char s[INET6_ADDRSTRLEN]; 
-    char handle[MAXHANDLESIZE];
-	size_t ln;
     
-    if (argc != 3) {
-        fprintf(stderr,"usage: client hostname portnumber\n");
-        exit(1);
-    }
-
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    if ((rv = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo(hostname, portno, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
     }
@@ -119,7 +71,7 @@ int main(int argc, char *argv[])
 
     if (p == NULL) {
         fprintf(stderr, "client: failed to connect\n");
-        return 2;
+        exit(1);
     }
 
     inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
@@ -128,21 +80,81 @@ int main(int argc, char *argv[])
 
     freeaddrinfo(servinfo); // all done with this structure
 	
+	return sockfd;
+}
+
+void chat(int socket_fd, char* handle){
+	char buf[MAXDATASIZE];
+	int numbytes;
+	int quit;
+	while(1){
+	
+		//send
+		memset(buf, 0, MAXDATASIZE);
+		printf("%s> ", handle);
+		fgets(buf, MAXDATASIZE-1, stdin);
+		quit = strncmp(buf, "\\quit", 4);
+		//printf("> buf: '%s', strncmp: %d\n", buf, cmp);
+		if (quit == 0){
+			if(send(socket_fd, "Connection closed by Client\n", 28, 0) == -1){
+				perror("send");
+				exit(1);
+			}
+			close(socket_fd);
+			exit(0);
+		}
+		else{
+			if(send(socket_fd, buf, strlen(buf), 0) == -1){
+				perror("send");
+				exit(1);
+			}
+		}
+		
+		//receive
+		if ((numbytes = recv(socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+			perror("recv");
+			exit(1);
+		}
+		if (strncmp(buf, "Connection closed by Server", 27) == 0){
+			printf("%s\n", buf);
+			close(socket_fd);
+			exit(0);
+		}
+		buf[numbytes-1] = '\0';
+		printf("Server> %s\n",buf);
+	}
+	return;
+}
+
+int main(int argc, char *argv[])
+{
+    int sockfd, numbytes;  
+    char buf[MAXDATASIZE];
+    char handle[MAXHANDLESIZE];
+	size_t ln;
+    
+    if (argc != 3) {
+        fprintf(stderr,"usage: client hostname portnumber\n");
+        exit(1);
+    }
+
+	//connect to Server
+	sockfd = setupConnect(argv[1], argv[2]);
+
+	//get handle and send to Server
 	printf("Please enter a handle up to %d characters: ", MAXHANDLESIZE);
 	fgets(handle, MAXHANDLESIZE, stdin);
-	
-	//strip newline
 	ln = strlen(handle) - 1;
 	if (handle[ln] == '\n')
     handle[ln] = '\0';
-    
     if(send(sockfd, handle, strlen(handle), 0) == -1){
 		perror("send");
+		exit(1);
 	}
 	
-	printf("Wait for prompt to begin typing message\n");
-	printf("Type '\\quit' to quit at any time\n");
-	
+	//Begin chat
+	printf("\nWait for prompt to begin typing message\n");
+	printf("Type '\\quit' to quit at any time\n\n");
 	chat(sockfd, handle);      
 
     close(sockfd);
